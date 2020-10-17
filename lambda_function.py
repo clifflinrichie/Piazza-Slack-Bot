@@ -1,10 +1,14 @@
 import json
+import os
 from slack import WebClient
 from slack.errors import SlackApiError
-
+from piazza_api import Piazza
 
 def lambda_handler(event, context):
-    client = WebClient(token='xoxb-1434731635618-1431758020501-skg9O2Y9qVP9qsgrbEg5Xrga')
+    p = Piazza()
+    p.user_login(os.environ['piazza_email'], os.environ['piazza_password'])
+
+    client = WebClient(token=os.environ['slack_token'])
     try:
         response = client.chat_postMessage(
         channel='#random',
