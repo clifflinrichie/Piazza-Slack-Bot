@@ -1,9 +1,10 @@
 import os
 from piazza_api import Piazza
-
+import html
+from bs4 import BeautifulSoup
 
 os.environ['PIAZZA_USERNAME'] = "nv2ba@virginia.edu"
-os.environ['PIAZZA_PASSWORD'] = "*********"
+os.environ['PIAZZA_PASSWORD'] = "***********"
 
 def get_child_post(children):
     ret = []
@@ -32,17 +33,23 @@ def get_post_attr(posts):
         })
     return all_post_attr
 
+def clean_text(text):
+    soup = BeautifulSoup(text, 'html.parser')
+    return html.unescape(soup.get_text())
+
 def pretty_print(post_dict):
     print("\n ****************************************** NEW POST ******************************************\n")
-    print(f"Main: {post_dict['content']}")
+
+    print(f"Main: {clean_text(post_dict['content'])}")
     print("\n**************************\n")
     for comment in post_dict['children']:
-        print(f"\tComment: {comment['text']}")
+        print(f"\t1st level Comment: {clean_text(comment['text'])}")
         print("\n**************************\n")
         if len(comment['children']) != 0:
             for child_comment in comment['children']:
-                print(f"\t\tComment: {child_comment['text']}")
+                print(f"\t\t2nd level Comment: {clean_text(child_comment['text'])}")
                 print("\n**************************\n")
+
 
 
 if __name__ == "__main__":
