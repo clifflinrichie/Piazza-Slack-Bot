@@ -3,18 +3,17 @@ from piazza_api import Piazza
 import html
 from bs4 import BeautifulSoup
 
-os.environ['PIAZZA_USERNAME'] = "nv2ba@virginia.edu"
-os.environ['PIAZZA_PASSWORD'] = "***********"
-
 def get_child_post(children):
     ret = []
     if len(children) == 0:
         return ret
     else:
         for child in children:
+            for x in child.keys():
+                print(x)
             if "subject" not in child.keys():
                 ret.append({
-                    'text': child['subject'],
+                    'text': child['history'][0]['content'],
                     'children': get_child_post(child['children'])
                 })
             else:
@@ -38,30 +37,17 @@ def clean_text(text):
     return html.unescape(soup.get_text())
 
 def pretty_print(post_dict):
-    print("\n ****************************************** NEW POST ******************************************\n")
+    text = ""
+    text += ("\n ****************************************** POST ******************************************\n")
 
-    print(f"Main: {clean_text(post_dict['content'])}")
-    print("\n**************************\n")
+    text += (f"{clean_text(post_dict['content'])}")
+    if(post_dict['children']):
+        text += ("\n**************************\n")
     for comment in post_dict['children']:
-        print(f"\t1st level Comment: {clean_text(comment['text'])}")
-        print("\n**************************\n")
+        text += (f"\t •{clean_text(comment['text'])}")
+        text += ("\n**************************\n")
         if len(comment['children']) != 0:
             for child_comment in comment['children']:
-                print(f"\t\t2nd level Comment: {clean_text(child_comment['text'])}")
-                print("\n**************************\n")
-
-
-
-if __name__ == "__main__":
-    p = Piazza()
-
-    p.user_login(email=os.environ['PIAZZA_USERNAME'], password=os.environ['PIAZZA_PASSWORD'])
-
-    num_recent = 4
-    cs2150 = p.network("k5bqcfbzltk49c")
-    posts = cs2150.iter_all_posts(limit=num_recent)
-
-    all_post_attr = get_post_attr(posts)
-
-    for post in all_post_attr:
-        pretty_print(post)
+                text += (f"\t\t ◦{clean_text(child_comment['text'])}")
+                text += ("\n**************************\n")
+    return text
