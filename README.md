@@ -1,7 +1,7 @@
 # Piazza Bot for Slack
 ### Overview
 ___
-This was a project created for the UVA GWC Hackathon 2020. The goal of this project was to help students and faculty in the current online ecosystem. We did so by creating a Slack Bot that would help students answer basic questions such as `Show me the last 3 piazza post(s)` or 'Show me the last 2 piazza post(s) by an instructor`. The idea was to allow students to remain in one econsystem (Slack) and still easily access their data from multiple platforms.
+This was a project created for the UVA GWC Hackathon 2020. The goal of this project was to help students and faculty in the current online ecosystem. We did so by creating a Slack Bot that would help students answer basic questions such as `Show me the last 3 piazza posts` or 'Can I view the previous 4 answered piazza posts`. The idea was to allow students to remain in one econsystem (Slack) and still easily access their data from multiple platforms.
 
 ### Architecture
 
