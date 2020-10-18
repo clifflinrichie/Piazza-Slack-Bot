@@ -6,7 +6,7 @@ from piazza_function import get_post_attr, pretty_print, pretty_print_instr
 import os
 
 def instructor_posts(my_class, instr_goal):
-    max_cid = my_class.get_statistics()['total']['questions'] - 1
+    max_cid = my_class.get_statistics()['total']['questions'] + 1
     cid = max_cid
     instr_goal = min(instr_goal, 10)
     num_instr = 0
