@@ -2,74 +2,104 @@ import json
 from slack import WebClient
 from slack.errors import SlackApiError
 from piazza_api import Piazza
-from piazza_function import get_post_attr, pretty_print
+import piazza_api
+import re
+from piazza_function import get_post_attr, pretty_print, pretty_print_instr
 import os
+import time
+
+def instructor_posts(my_class, instr_goal):
+    max_cid = my_class.get_statistics()['total']['questions'] - 1
+    cid = max_cid
+    instr_goal = min(instr_goal, 10)
+    num_instr = 0
+    text = ""
+    while(num_instr < instr_goal and cid > (max_cid - 25)):
+        try:
+            post = my_class.get_post(cid)
+            all_post_attr = get_post_attr([post])
+            post_text = pretty_print_instr(all_post_attr[0])
+            if post_text != "":
+                text+=post_text
+                num_instr+=1
+        except piazza_api.exceptions.RequestError:
+            print(cid)
+            pass
+        cid-=1
+    return text
+
+def specific_instructor(my_class, num_recent, prof_name):
+    total_posts = my_class.iter_all_posts(limit=50)
+    posts_by_professor = []
+    text = ""
+    count = 0
+
+    for post in total_posts:
+        if (count == 10):
+            time.sleep(0.05)
+            count = 0
+        elif (post['history'][0]['anon'] == 'no'):
+            prof_id = post['history'][0]['uid']
+            professor = my_class.get_users([prof_id])[0]['name']
+
+            if (prof_name.lower() == professor.lower()):
+                posts_by_professor.append(post)
+            count += 1
+
+    all_post_attr = get_post_attr(posts_by_professor)
+    for post in all_post_attr:
+        if num_recent > 0:
+            text += pretty_print(post)
+        num_recent -= 1
+
+    return text
+
 
 def lambda_handler(event, context):
     p = Piazza()
-    p.user_login(os.environ['PIAZZA_EMAIL'],os.environ['PIAZZA_PASSWORD'])
+    p.user_login(os.environ['piazza_email'], os.environ['piazza_password'])
     user_profile = p.get_user_profile()
-
-    user_id = user_profile['user_id']
-    print(event)
     myEvent = event['event']
     client = WebClient(token=os.environ['slack_token'])
 
-    if(myEvent['type'] == 'message'):
-        if ('Check if in class: ' in myEvent['text']):
-            nameID = myEvent['text']
-            name = nameID.split('Check if in class: ', 1)[1]
-            print("name input: " + str(name))
-            cs2110 = p.network(os.environ['class_map'])    # CS 2110 
-            
-            students = cs2110.get_users([user_id]) # returns dictionary of user(s) information
-            # user not in class
-            print(students)
-            if (not students):
-                response = client.chat_postMessage(
-                channel=myEvent['channel'],
-                text="User does not exist in this class")
-            else:
-                for student in students:
-                    myName = student['name']
-                    myID = student['id']
-                    myRole = student['role']
-                    response = client.chat_postMessage(
-                    channel=myEvent['channel'],
-                    text="The student " + myName + " is a " + myRole + " and has the ID " + myID)
+    question = myEvent['text']
+    bot_name = myEvent['user']
+
+    my_class = p.network(os.environ['CS2110'])
 
     if(myEvent['type'] == 'app_mention'):
-        if(('Show me the last' in myEvent['text']) and ('piazza post(s)' in myEvent['text'])):
-            question = myEvent['text']
-            my_class = p.network(os.environ["CS2110"])
-            all_post_attr = []
+        if (('answer' in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
+            my_text = instructor_posts(my_class, int(num_recent))
+            response = client.chat_postMessage(
+                channel=myEvent['channel'],
+                text=my_text)
+
+        elif(('by' not in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
+            posts = my_class.iter_all_posts(limit=int(num_recent))
+            all_post_attr = get_post_attr(posts)
             my_text = ""
-
-            if (('by professor' in myEvent['text'])):
-                question = (question.replace('Show me the last ', '').replace(' piazza post(s)', '')).replace(' by','').split(' ')
-                num_recent = question[0]
-                professor = question[1] + " " + question[2]
-                total_posts = my_class.iter_all_posts()
-                posts_by_professor = []
-                for post in total_posts:
-                    prof_id = post['history'][0]['uid']
-                    prof_name = my_class.get_users([prof_id])[0]['name']
-                    if (prof_name == professor):
-                        posts_by_professor.append(post)
-
-                print(posts_by_professor)
-                all_post_attr = get_post_attr(posts_by_professor)
-                for post in all_post_attr:
-                    my_text += pretty_print(post)
-
-            else:
-                num_recent = (question.replace('Show me the last ', '').replace(' piazza post(s)', '')).split(' ', 2)[1]
-                posts = my_class.iter_all_posts(limit=int(num_recent))
-                all_post_attr = get_post_attr(posts)
-
-                for post in all_post_attr:
-                    my_text += pretty_print(post)
+            for post in all_post_attr:
+                my_text += pretty_print(post)
 
             response = client.chat_postMessage(
                 channel=myEvent['channel'],
                 text=my_text)
+        
+        elif(('by' in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
+            question = question.split(' by ', 1)
+            professor = question[1]
+            my_text = specific_instructor(my_class, num_recent, professor)
+
+            response = client.chat_postMessage(
+                channel=myEvent['channel'],
+                text=my_text)
+            
