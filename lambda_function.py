@@ -50,11 +50,7 @@ def lambda_handler(event, context):
                 channel=myEvent['channel'],
                 text=my_text)
         elif(('Show me the last' in myEvent['text']) and ('instructor post(s)' in myEvent['text'])):
-            print(f"Event: {event}")
-            print(f"**************")
             num_recent = re.search(r"(\s(\d+)\s)", myEvent['text'])[0].strip()
-            print(myEvent['text'])
-            print("Where is this? Recent:", num_recent, ":after")
             my_class = p.network(os.environ['CS2110'])
             my_text = instructor_posts(my_class, int(num_recent))
             response = client.chat_postMessage(
