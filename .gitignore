@@ -1,5 +1,7 @@
 slack_env
 .vscode
+setup_function_zip.sh
+.DS_STORE
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
