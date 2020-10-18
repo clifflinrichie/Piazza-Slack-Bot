@@ -65,7 +65,7 @@ def lambda_handler(event, context):
     question = myEvent['text']
     bot_name = myEvent['user']
 
-    my_class = p.network(os.environ['CS2110'])
+    my_class = p.network(os.environ['my_class'])
 
     if(myEvent['type'] == 'app_mention'):
         if (('answer' in myEvent['text']) and ('post' in myEvent['text'])):
