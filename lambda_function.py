@@ -25,5 +25,5 @@ def lambda_handler(event, context):
                 my_text += pretty_print(post)
 
             response = client.chat_postMessage(
-                channel=event['channel'],
+                channel=myEvent['channel'],
                 text=my_text)

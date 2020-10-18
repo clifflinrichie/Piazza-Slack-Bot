@@ -39,15 +39,15 @@ def clean_text(text):
 def pretty_print(post_dict):
     text = ""
     text += ("\n ****************************************** POST ******************************************\n")
-
-    text += (f"{clean_text(post_dict['content'])}")
-    if(post_dict['children']):
-        text += ("\n**************************\n")
+    text += ("\*bold\*")
+    text += ("*bold*")
+    text += (f"```{clean_text(post_dict['content'])}```")
     for comment in post_dict['children']:
-        text += (f"\t •{clean_text(comment['text'])}")
-        text += ("\n**************************\n")
+        text += (f"\n>```{(clean_text(comment['text']))}```")
+        text += ("\n")
         if len(comment['children']) != 0:
             for child_comment in comment['children']:
-                text += (f"\t\t ◦{clean_text(child_comment['text'])}")
-                text += ("\n**************************\n")
+                text += (f"\n>```{(clean_text(comment['text']))}```")
+                text += ("\n")
+    text += ("\n")
     return text
