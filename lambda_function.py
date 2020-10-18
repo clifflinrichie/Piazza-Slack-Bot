@@ -1,9 +1,7 @@
-import json
 from slack import WebClient
 from slack.errors import SlackApiError
 from piazza_api import Piazza
 import piazza_api
-import re
 from piazza_function import get_post_attr, pretty_print, pretty_print_instr
 import os
 
@@ -34,11 +32,23 @@ def lambda_handler(event, context):
     myEvent = event['event']
     client = WebClient(token=os.environ['slack_token'])
 
+    question = myEvent['text']
+    bot_name = myEvent['user']
 
     if(myEvent['type'] == 'app_mention'):
-        if(('Show me the last' in myEvent['text']) and ('piazza post(s)' in myEvent['text'])):
-            question = myEvent['text']
-            num_recent = (question.replace('Show me the last ', '').replace(' piazza post(s)', '')).strip().split(' ', 2)[1]
+        if (('answer' in myEvent['text']) and ('post' in myEvent['text'])):
+            question_cleaned = (question.replace(bot_name, '').replace('\xa0', ''))
+            list_recent = [int(x) for x in question_cleaned.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            my_class = p.network(os.environ['CS2110'])
+            my_text = instructor_posts(my_class, int(num_recent))
+            response = client.chat_postMessage(
+                channel=myEvent['channel'],
+                text=my_text)
+        elif(('instructor' not in myEvent['text']) and ('post' in myEvent['text'])):
+            question_cleaned = (question.replace(bot_name, '').replace('\xa0', ''))
+            list_recent = [int(x) for x in question_cleaned.split() if x.isdigit()]
+            num_recent = list_recent[0]
             my_class = p.network(os.environ["CS2110"])
             posts = my_class.iter_all_posts(limit=int(num_recent))
             all_post_attr = get_post_attr(posts)
@@ -49,15 +59,3 @@ def lambda_handler(event, context):
             response = client.chat_postMessage(
                 channel=myEvent['channel'],
                 text=my_text)
-        elif(('Show me the last' in myEvent['text']) and ('instructor post(s)' in myEvent['text'])):
-            print(f"Event: {event}")
-            print(f"**************")
-            num_recent = re.search(r"(\s(\d+)\s)", myEvent['text'])[0].strip()
-            print(myEvent['text'])
-            print("Where is this? Recent:", num_recent, ":after")
-            my_class = p.network(os.environ['CS2110'])
-            my_text = instructor_posts(my_class, int(num_recent))
-            response = client.chat_postMessage(
-                channel=myEvent['channel'],
-                text=my_text)
-            
