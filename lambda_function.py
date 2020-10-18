@@ -28,17 +28,14 @@ def instructor_posts(my_class, instr_goal):
 def lambda_handler(event, context):
     p = Piazza()
     p.user_login(os.environ['piazza_email'], os.environ['piazza_password'])
-    user_profile = p.get_user_profile()
-    myEvent = event['event']
     client = WebClient(token=os.environ['slack_token'])
 
+    myEvent = event['event']
     question = myEvent['text']
-    bot_name = myEvent['user']
 
     if(myEvent['type'] == 'app_mention'):
         if (('answer' in myEvent['text']) and ('post' in myEvent['text'])):
-            question_cleaned = (question.replace(bot_name, '').replace('\xa0', ''))
-            list_recent = [int(x) for x in question_cleaned.split() if x.isdigit()]
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
             num_recent = list_recent[0]
             my_class = p.network(os.environ['CS2110'])
             my_text = instructor_posts(my_class, int(num_recent))
@@ -46,8 +43,7 @@ def lambda_handler(event, context):
                 channel=myEvent['channel'],
                 text=my_text)
         elif(('instructor' not in myEvent['text']) and ('post' in myEvent['text'])):
-            question_cleaned = (question.replace(bot_name, '').replace('\xa0', ''))
-            list_recent = [int(x) for x in question_cleaned.split() if x.isdigit()]
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
             num_recent = list_recent[0]
             my_class = p.network(os.environ["CS2110"])
             posts = my_class.iter_all_posts(limit=int(num_recent))
