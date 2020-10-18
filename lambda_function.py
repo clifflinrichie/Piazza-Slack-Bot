@@ -6,6 +6,7 @@ import piazza_api
 import re
 from piazza_function import get_post_attr, pretty_print, pretty_print_instr
 import os
+import time
 
 def instructor_posts(my_class, instr_goal):
     max_cid = my_class.get_statistics()['total']['questions'] - 1
@@ -27,6 +28,33 @@ def instructor_posts(my_class, instr_goal):
         cid-=1
     return text
 
+def specific_instructor(my_class, num_recent, prof_name):
+    total_posts = my_class.iter_all_posts(limit=50)
+    posts_by_professor = []
+    text = ""
+    count = 0
+
+    for post in total_posts:
+        if (count == 10):
+            time.sleep(0.05)
+            count = 0
+        elif (post['history'][0]['anon'] == 'no'):
+            prof_id = post['history'][0]['uid']
+            professor = my_class.get_users([prof_id])[0]['name']
+
+            if (prof_name.lower() == professor.lower()):
+                posts_by_professor.append(post)
+            count += 1
+
+    all_post_attr = get_post_attr(posts_by_professor)
+    for post in all_post_attr:
+        if num_recent > 0:
+            text += pretty_print(post)
+        num_recent -= 1
+
+    return text
+
+
 def lambda_handler(event, context):
     p = Piazza()
     p.user_login(os.environ['piazza_email'], os.environ['piazza_password'])
@@ -34,12 +62,25 @@ def lambda_handler(event, context):
     myEvent = event['event']
     client = WebClient(token=os.environ['slack_token'])
 
+    question = myEvent['text']
+    bot_name = myEvent['user']
+
+    my_class = p.network(os.environ['CS2110'])
 
     if(myEvent['type'] == 'app_mention'):
-        if(('Show me the last' in myEvent['text']) and ('piazza post(s)' in myEvent['text'])):
-            question = myEvent['text']
-            num_recent = (question.replace('Show me the last ', '').replace(' piazza post(s)', '')).strip().split(' ', 2)[1]
-            my_class = p.network(os.environ["CS2110"])
+        if (('answer' in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
+            my_text = instructor_posts(my_class, int(num_recent))
+            response = client.chat_postMessage(
+                channel=myEvent['channel'],
+                text=my_text)
+
+        elif(('by' not in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
             posts = my_class.iter_all_posts(limit=int(num_recent))
             all_post_attr = get_post_attr(posts)
             my_text = ""
@@ -49,14 +90,15 @@ def lambda_handler(event, context):
             response = client.chat_postMessage(
                 channel=myEvent['channel'],
                 text=my_text)
-        elif(('Show me the last' in myEvent['text']) and ('instructor post(s)' in myEvent['text'])):
-            print(f"Event: {event}")
-            print(f"**************")
-            num_recent = re.search(r"(\s(\d+)\s)", myEvent['text'])[0].strip()
-            print(myEvent['text'])
-            print("Where is this? Recent:", num_recent, ":after")
-            my_class = p.network(os.environ['CS2110'])
-            my_text = instructor_posts(my_class, int(num_recent))
+        
+        elif(('by' in myEvent['text']) and ('post' in myEvent['text'])):
+            list_recent = [int(x) for x in question.split() if x.isdigit()]
+            num_recent = list_recent[0]
+            
+            question = question.split(' by ', 1)
+            professor = question[1]
+            my_text = specific_instructor(my_class, num_recent, professor)
+
             response = client.chat_postMessage(
                 channel=myEvent['channel'],
                 text=my_text)
